@@ -1,8 +1,6 @@
 # RAG
 chromadb==1.5.9
-qdrant-client==1.19.0
 sentence-transformers==5.7.0
-rank-bm25==0.2.2
 pandas==3.0.5
 langchain-text-splitters==1.1.2
 
@@ -10,16 +8,7 @@ langchain-text-splitters==1.1.2
 langgraph==1.2.10
 langchain==1.3.14
 langchain-community==0.4.2
-ollama==0.6.2
-
-# Fine-tuning
-torch==2.13.0
-transformers==5.14.1
-peft==0.20.0
-trl==1.9.2
-datasets==5.0.1
-accelerate==1.14.0
-bitsandbytes==0.50.0
+openai
 
 # API & interface
 fastapi==0.141.1
@@ -30,4 +19,3 @@ requests==2.34.2
 # Utilitaires
 numpy==2.4.6
 pydantic==2.13.4
-scikit-learn==1.9.0
