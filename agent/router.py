@@ -1,8 +1,8 @@
 import os
-import ollama
+from openai import OpenAI
 
-OLLAMA_HOST = os.environ.get("OLLAMA_HOST", "http://localhost:11434")
-ollama_client = ollama.Client(host=OLLAMA_HOST)
+GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
+client = OpenAI(api_key=GROQ_API_KEY, base_url="https://api.groq.com/openai/v1")
 
 def router_node(state):
     prompt = f"""Classify this question into exactly one category:
@@ -15,7 +15,11 @@ Question: {state['question']}
 
 Answer with only the category name."""
 
-    response = ollama_client.generate(model="llama3.1:8b", prompt=prompt)["response"].strip().lower()
+    response = client.chat.completions.create(
+        model="llama-3.1-8b-instant",
+        messages=[{"role": "user", "content": prompt}],
+    )
+    response = response.choices[0].message.content.strip()
 
     valid_intents = ["exercise_lookup", "program_request", "conversational", "off_topic"]
     intent = next((i for i in valid_intents if i in response), "conversational")

@@ -4,11 +4,11 @@ import re
 from pydantic import BaseModel
 from typing import List, Optional
 import json
-import ollama
 import os
+from openai import OpenAI
 
-OLLAMA_HOST = os.environ.get("OLLAMA_HOST", "http://localhost:11434")
-ollama_client = ollama.Client(host=OLLAMA_HOST)
+GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
+client = OpenAI(api_key=GROQ_API_KEY, base_url="https://api.groq.com/openai/v1")
 
 DEFAULT_MUSCLE_GROUPS = ["chest", "back", "upper legs", "shoulders", "waist"]
 PPL_GROUPS = {
@@ -46,7 +46,11 @@ Also extract any specific preferences or constraints mentioned (e.g. "avoid squa
 Request: {question}
 Respond with ONLY a JSON object like this: {{"muscles": ["chest"], "equipment": ["dumbbell"], "preferences": null}}"""
 
-    response = ollama_client.generate(model="llama3.1:8b", prompt=prompt)["response"].strip()
+    response = client.chat.completions.create(
+        model="llama-3.1-8b-instant",
+        messages=[{"role": "user", "content": prompt}],
+    )
+    response = response.choices[0].message.content.strip()
 
     match = re.search(r'\{.*?\}', response, re.DOTALL)
     if not match:
@@ -120,7 +124,11 @@ def generate_program(candidates, preferences, max_retries=2):
     IMPORTANT: You MUST include between 2 and 3 exercises for EACH muscle group listed above, not just one exercise total."""
 
     for attempt in range(max_retries):
-        response = ollama_client.generate(model="llama3.1:8b", prompt=prompt)["response"]
+        response = client.chat.completions.create(
+            model="llama-3.1-8b-instant",
+            messages=[{"role": "user", "content": prompt}],
+        )
+        response = response.choices[0].message.content
 
         json_str = extract_first_json_object(response)
         if json_str:
