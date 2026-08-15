@@ -23,8 +23,15 @@ def get_collection(chunks, metadatas, embeddings, db_path="./chromadb"):
     chroma_host = os.environ.get("CHROMA_HOST")
 
     if chroma_host:
-        chroma_port = int(os.environ.get("CHROMA_PORT", 8000))
-        client = chromadb.HttpClient(host=chroma_host, port=chroma_port)
+        if chroma_host.startswith("https://"):
+            hostname = chroma_host.replace("https://", "")
+            client = chromadb.HttpClient(host=hostname, ssl=True, port=443)
+        elif chroma_host.startswith("http://"):
+            hostname = chroma_host.replace("http://", "")
+            client = chromadb.HttpClient(host=hostname, ssl=False)
+        else:
+            chroma_port = int(os.environ.get("CHROMA_PORT", 8000))
+            client = chromadb.HttpClient(host=chroma_host, port=chroma_port)
     else:
         client = chromadb.PersistentClient(path=db_path)
 
