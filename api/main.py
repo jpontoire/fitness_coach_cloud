@@ -27,6 +27,8 @@ app.add_middleware(
 class QuestionRequest(BaseModel):
     question: str
     equipment: Optional[List[str]] = None
+    provider: Optional[str] = None
+    api_key: Optional[str] = None
 
 class AnswerResponse(BaseModel):
     intent: str
@@ -41,8 +43,18 @@ def ask(request: QuestionRequest):
     if not request.question.strip():
         raise HTTPException(status_code=400, detail="Question cannot be empty")
 
+    if not request.api_key:
+        raise HTTPException(
+            status_code=400,
+            detail="An API key is required. Please provide your own Groq or OpenAI API key."
+        )
+
     try:
-        state = {"question": request.question}
+        state = {
+            "question": request.question,
+            "provider": request.provider or "groq",
+            "api_key": request.api_key,
+        }
         if request.equipment:
             state["equipment"] = request.equipment
 

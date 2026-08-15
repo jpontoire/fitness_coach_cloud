@@ -1,16 +1,9 @@
-from rag.retrieval import retrieve
-
 import re
 from pydantic import BaseModel
 from typing import List, Optional
 import json
-import os
-from openai import OpenAI
+from .llm import get_client_and_model
 
-GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
-client = OpenAI(api_key=GROQ_API_KEY, base_url="https://api.groq.com/openai/v1")
-
-DEFAULT_MUSCLE_GROUPS = ["chest", "back", "upper legs", "shoulders", "waist"]
 PPL_GROUPS = {
     "push": ["chest", "shoulders", "upper arms"],   # triceps is in "upper arms"
     "pull": ["back", "upper arms", "lower arms"],    # biceps is in "upper arms", anterior biceps is in "lower arms"
@@ -33,7 +26,9 @@ class WorkoutProgram(BaseModel):
     notes: Optional[str] = None
 
 
-def extract_program_params(question):
+def extract_program_params(question, provider=None, api_key=None):
+    client, model = get_client_and_model(provider, api_key)
+
     prompt = f"""Extract structured information from this workout request.
 If the request mentions a "push", "pull", or "legs" day/split, map it to muscle groups as follows:
 - push → chest, shoulders, upper arms
@@ -47,7 +42,7 @@ Request: {question}
 Respond with ONLY a JSON object like this: {{"muscles": ["chest"], "equipment": ["dumbbell"], "preferences": null}}"""
 
     response = client.chat.completions.create(
-        model="llama-3.1-8b-instant",
+        model=model,
         messages=[{"role": "user", "content": prompt}],
     )
     response = response.choices[0].message.content.strip()
@@ -101,7 +96,10 @@ def extract_first_json_object(text):
                 return text[start:i+1]
     return None
 
-def generate_program(candidates, preferences, max_retries=2):
+
+def generate_program(candidates, preferences, provider=None, api_key=None, max_retries=2):
+    client, model = get_client_and_model(provider, api_key)
+
     candidates_text = ""
     for muscle, exercises in candidates.items():
         candidates_text += f"\n{muscle.upper()}:\n"
@@ -125,7 +123,7 @@ def generate_program(candidates, preferences, max_retries=2):
 
     for attempt in range(max_retries):
         response = client.chat.completions.create(
-            model="llama-3.1-8b-instant",
+            model=model,
             messages=[{"role": "user", "content": prompt}],
         )
         response = response.choices[0].message.content
