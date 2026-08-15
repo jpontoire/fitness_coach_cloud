@@ -20,11 +20,12 @@ def load_resources():
     exercises = load_exercises(DATA_PATH)
     chunks, metadatas = build_dataset(exercises)
     chunks, metadatas, embeddings = create_embeddings(chunks, metadatas, EMBEDDINGS_PATH)
-    collection = get_collection(chunks, metadatas, embeddings)
     embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
 
     return {
-        "collection": collection,
+        "chunks": chunks,
+        "metadatas": metadatas,
+        "embeddings": embeddings,
         "embedding_model": embedding_model,
     }
 
@@ -40,13 +41,13 @@ def generate_response(question, max_new_tokens=400):
     return response.choices[0].message.content
 
 def rag_node(state, resources):
+    collection = get_collection(resources["chunks"], resources["metadatas"], resources["embeddings"])
+
     where = None
     if state.get("equipment"):
         where = {"equipment": {"$in": state["equipment"]}}
-    results = retrieve(state["question"], resources["collection"], resources["embedding_model"], k=5, where=where)
-    context = "\n\n---\n\n".join(
-        doc for doc in results["documents"][0]
-    )
+    results = retrieve(state["question"], collection, resources["embedding_model"], k=5, where=where)
+    context = "\n\n---\n\n".join(doc for doc in results["documents"][0])
     return {"context": context}
 
 def generate_node(state, resources):
@@ -61,11 +62,13 @@ def refusal_node(state, resources):
     return {"answer": REFUSAL_ANSWER}
 
 def program_node(state, resources):
+    collection = get_collection(resources["chunks"], resources["metadatas"], resources["embeddings"])
+
     params = extract_program_params(state["question"])
     equipment = state.get("equipment") or params.equipment
     candidates = retrieve_for_program(
         params.muscles, equipment,
-        resources["collection"], resources["embedding_model"]
+        collection, resources["embedding_model"]
     )
     program = generate_program(candidates, params.preferences)
     if program is None:
